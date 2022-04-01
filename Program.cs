@@ -1,12 +1,11 @@
 ﻿using System;
 
-namespace Expressions
+namespace Expressions;
+
+class Program
 {
-    class Program
+    static void Main(string[] args)
     {
-        static void Main(string[] args)
-        {
-            Console.WriteLine("Hello World!");
-        }
+        new Test.TestCases().RunTests();
     }
 }
