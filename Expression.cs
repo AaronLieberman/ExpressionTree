@@ -1,19 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Expressions;
 
 public class ExpressionTree
 {
-    public ExpressionTree(string expressionString)
+    public object? Value { get; private set; }
+    public IEnumerable<ExpressionTree> Children { get; } = new List<ExpressionTree>();
+
+    public static ExpressionTree Build(string expression)
     {
+        return ParseExpression(expression);
     }
 
-    public object Evaluate()
+    public object? Evaluate()
     {
-        return 3.0;
+        return Value is Func<object, ExpressionTree[]> func
+            ? func(Children)
+            : Value;
     }
 
+    static ExpressionTree ParseExpression(string expression)
+    {
+        var p = new TokenParser(expression);
 
+        string? s;
+        while ((s = p.NextToken()) != null)
+        {
+
+        }
+    }
 }

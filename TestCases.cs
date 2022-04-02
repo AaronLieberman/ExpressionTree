@@ -6,6 +6,7 @@ using System.Text;
 using Expressions;
 using JetBrains.Annotations;
 
+// ReSharper disable once CheckNamespace
 namespace Expressions.Test;
 
 #pragma warning disable IDE0051
@@ -34,7 +35,7 @@ class TestCases
     #region Check
 
     [DebuggerHidden]
-    void Check<T>(object o, T v)
+    void Check<T>(object? o, T v)
     {
         Debug.Assert(o is T);
         if (o is T)
@@ -45,9 +46,9 @@ class TestCases
 
     #endregion
 
-    static object BuildAndEval(string expression)
+    static object? BuildAndEval(string expression)
     {
-        return new ExpressionTree(expression).Evaluate();
+        return ExpressionTree.Build(expression).Evaluate();
     }
 
     [TestCase]
