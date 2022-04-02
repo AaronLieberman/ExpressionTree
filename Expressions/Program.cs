@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Expressions;
+﻿namespace Expressions;
 
 class Program
 {
