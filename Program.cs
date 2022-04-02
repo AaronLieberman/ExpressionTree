@@ -6,6 +6,6 @@ class Program
 {
     static void Main(string[] args)
     {
-        new Test.TestCases().RunTests();
+        new Test.ExpressionTests().RunTests();
     }
 }

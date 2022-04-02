@@ -1,26 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Reflection;
-using System.Text;
-using Expressions;
 using JetBrains.Annotations;
 
-// ReSharper disable once CheckNamespace
 namespace Expressions.Test;
 
 #pragma warning disable IDE0051
 
-[JetBrains.Annotations.MeansImplicitUse] 
+[MeansImplicitUse] 
 class TestCaseAttribute : Attribute { }
 
-class TestCases
+class ExpressionTests
 {
     #region RunTests
 
     public void RunTests()
     {
-        var testClass = new TestCases();
+        var testClass = new ExpressionTests();
         foreach (var method in GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.Instance))
         {
             if (method.GetCustomAttribute<TestCaseAttribute>() != null)
