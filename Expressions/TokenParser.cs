@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace Expressions;
 
@@ -18,25 +19,25 @@ class TokenParser
 
     public TokenParser(string expression)
     {
-        _expression = expression;
+        _expression = Regex.Replace(expression, "\\s+", " ");
     }
 
     string? ConsumeIf(Func<char, bool> matchChar)
     {
         int start = _index;
-        if (!matchChar(_expression[_index])) return null;
+        if (_index >= _expression.Length || !matchChar(_expression[_index])) return null;
         while (_index < _expression.Length && matchChar(_expression[_index]))
         {
             _index++;
         }
 
-        return _expression.Substring(start, _index);
+        return _expression.Substring(start, _index - start);
     }
 
     static bool IsWordChar(char c, bool isFirstChar)
     {
         if ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c == '_')) return true;
-        if (isFirstChar && (c >= '0' && c <= '9')) return true;
+        if (!isFirstChar && (c >= '0' && c <= '9')) return true;
         return false;
     }
 
@@ -52,7 +53,7 @@ class TokenParser
 
     string? ConsumeIfString()
     {
-        if (_expression[_index] is not '\'' and not '"') return null;
+        if (_index >= _expression.Length || _expression[_index] is not '\'' and not '"') return null;
         char quoteChar = _expression[_index];
 
         int start = _index;
@@ -66,7 +67,9 @@ class TokenParser
             _index++;
         }
 
-        return _expression.Substring(start, _index);
+        if (_index < _expression.Length) _index++;
+
+        return _expression.Substring(start, _index - start);
     }
 
     void SkipWhitespace()

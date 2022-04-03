@@ -1,33 +1,13 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Reflection;
-using JetBrains.Annotations;
+using Xunit;
 
-namespace Expressions.Test;
+namespace Expressions.Tests;
 
 #pragma warning disable IDE0051
 
-[MeansImplicitUse] 
-class TestCaseAttribute : Attribute { }
-
-class ExpressionTests
+public class ExpressionTests
 {
-    #region RunTests
-
-    public void RunTests()
-    {
-        var testClass = new ExpressionTests();
-        foreach (var method in GetType().GetMethods(BindingFlags.NonPublic | BindingFlags.DeclaredOnly | BindingFlags.Instance))
-        {
-            if (method.GetCustomAttribute<TestCaseAttribute>() != null)
-            {
-                method.Invoke(testClass, null);
-            }
-        }
-    }
-
-    #endregion
-
     #region Check
 
     [DebuggerHidden]
@@ -47,7 +27,7 @@ class ExpressionTests
         return ExpressionTree.Build(expression).Evaluate();
     }
 
-    [TestCase]
+    [Fact]
     void Constants()
     {
         Check(BuildAndEval("3"), 3.0);
@@ -62,15 +42,29 @@ class ExpressionTests
         Check(BuildAndEval("0"), 0);
     }
 
-    [TestCase]
+    [Fact]
     void Arithmetic()
     {
         Check(BuildAndEval("3+2"), 5);
         Check(BuildAndEval("3 + 10 * 4 / 2 - 1"), 22);
+
+        Check(BuildAndEval("(3 + 10) * 4 / 2 - 1"), 25);
+        Check(BuildAndEval("(3 + 10) * 4 / (2 - 1)"), 52);
+        Check(BuildAndEval("(3 + (2 - 3)) * 4 / 2 - 1"), 7);
     }
 
-    [TestCase]
-    void Simple()
+    [Fact]
+    void Unary()
+    {
+        Check(BuildAndEval("-3"), -3);
+        Check(BuildAndEval("+3"), 3);
+        Check(BuildAndEval("3 + -2"), 1);
+        Check(BuildAndEval("-3 + 2"), -1);
+        Check(BuildAndEval("-3 + -2"), -5);
+    }
+
+    [Fact]
+    void SimpleFunctions()
     {
         Check(BuildAndEval("not(true)"), false);
         Check(BuildAndEval("NoT(true)"), false);
@@ -94,9 +88,10 @@ class ExpressionTests
         Check(BuildAndEval("_or(not(true), not(false))"), true);
     }
 
-    [TestCase]
+    [Fact]
     void Shortcuts()
     {
+        throw new NotImplementedException();
         // TODO broken right now, investigate at some point
         // check(buildAndEval("-3"), -3);
         // check(buildAndEval("!true"), false);
@@ -112,7 +107,7 @@ class ExpressionTests
         // check(buildAndEval("true or false"), true);
     }
 
-    [TestCase]
+    [Fact]
     void Conversion()
     {
         Check(BuildAndEval("to_bool(0)"), false);
@@ -120,7 +115,7 @@ class ExpressionTests
         Check(BuildAndEval("to_int(true)"), 1);
     }
 
-    [TestCase]
+    [Fact]
     void Equality()
     {
         void f(string co, bool trueValue)
@@ -141,7 +136,7 @@ class ExpressionTests
         f("ne", false);
     }
 
-    [TestCase]
+    [Fact]
     void Conditional()
     {
         Check(BuildAndEval("if_else(true, 'hi', 'bye')"), "hi");
@@ -154,7 +149,7 @@ class ExpressionTests
         // check(buildAndEval("if_else(eq('hi','bye'), 1 + 3, 8)"), 8);
     }
 
-    //[TestCase]
+    //[Fact]
     //void Bindings()
     //{
     //    FakePropertyResolver resolver;
