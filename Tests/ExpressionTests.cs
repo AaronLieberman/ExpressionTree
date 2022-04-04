@@ -20,6 +20,27 @@ public class ExpressionTests
         return ExpressionTree.Build(expression).Evaluate(propertyResolver ?? new EvalContext());
     }
 
+    #region FakeEvalContext
+
+    class FakeEvalContext : IEvalContext
+    {
+        readonly Dictionary<string, object?> _values = new();
+
+        public void Add(string dataContextName, string propertyName, object? value)
+        {
+            string key = (dataContextName + "." + propertyName).ToLowerInvariant();
+            _values[key] = value;
+        }
+
+        public object? GetPropertyValue(string dataContextName, string propertyName)
+        {
+            string key = (dataContextName + "." + propertyName).ToLowerInvariant();
+            return _values.TryGetValue(key, out object? result) ? result : null;
+        }
+    }
+
+#endregion
+
     [Fact]
     void Constants()
     {
@@ -99,6 +120,11 @@ public class ExpressionTests
         Check(BuildAndEval("true -or false"), true);
         Check(BuildAndEval("false -or false"), false);
         Check(BuildAndEval("!true -or !false"), true);
+
+        Check(BuildAndEval("false && _test_throw"), false);
+        Assert.Throws<InvalidOperationException>(() => BuildAndEval("true && _test_throw"));
+        Check(BuildAndEval("true || _test_throw"), true);
+        Assert.Throws<InvalidOperationException>(() => BuildAndEval("false || _test_throw"));
     }
 
     [Fact]
@@ -123,6 +149,14 @@ public class ExpressionTests
     }
 
     [Fact]
+    void SimpleFunction()
+    {
+        Assert.InRange(Convert.ToSingle(BuildAndEval("sin(1.57)")), .9, 1.1);
+        Assert.InRange(Convert.ToSingle(BuildAndEval("sin(math.pi / 2)")), .9, 1.1);
+        Assert.Throws<InvalidOperationException>(() => BuildAndEval("_test_throw"));
+    }
+
+    [Fact]
     void Conditional()
     {
         Check(BuildAndEval("if_else(true, 'hi', 'bye')"), "'hi'");
@@ -132,24 +166,10 @@ public class ExpressionTests
 
         Check(BuildAndEval("if_else('hi' -eq 'hi', 1 + 3, 8)"), 4);
         Check(BuildAndEval("if_else('hi' -eq 'bye', 1 + 3, 8)"), 8);
-    }
 
-    class FakeEvalContext : IEvalContext
-    {
-        readonly Dictionary<string, object?> _values = new();
-
-        public void Add(string dataContextName, string propertyName, object? value)
-        {
-            string key = (dataContextName + "." + propertyName).ToLowerInvariant();
-            _values[key] = value;
-        }
-
-
-        public object? GetPropertyValue(string dataContextName, string propertyName)
-        {
-            string key = (dataContextName + "." + propertyName).ToLowerInvariant();
-            return _values.TryGetValue(key, out object? result) ? result : null;
-        }
+        Check(BuildAndEval("if_else(true, 4, _test_throw)"), 4);
+        Check(BuildAndEval("if_else(false, _test_throw, 5)"), 5);
+        Assert.Throws<InvalidOperationException>(() => BuildAndEval("if_else(false, 4, _test_throw)"));
     }
 
     [Fact]
@@ -157,7 +177,7 @@ public class ExpressionTests
     {
         var resolver = new FakeEvalContext();
         resolver.Add("context", "value_3", 3);
-        resolver.Add("context", "value_have", "here");
+        resolver.Add("context", "value_here", "'here'");
         resolver.Add("context", "value_true", true);
         resolver.Add("context", "value_false", false);
 
@@ -171,11 +191,11 @@ public class ExpressionTests
         Check(BuildAndEval("not_null(cOnTeXt.VaLuE_3)", resolver), true);
         Check(BuildAndEval("not_null(context.missing)", resolver), false);
         Check(BuildAndEval("not_null(cOnTeXt.MiSsInG)", resolver), false);
-        //Check(BuildAndEval("exists_else(context.value_3, 4)", resolver), 3);
-        //Check(BuildAndEval("exists_else(context.missing, 5)", resolver), 5);
+        Check(BuildAndEval("exists_else(context.value_3, 4)", resolver), 3);
+        Check(BuildAndEval("exists_else(context.missing, 5)", resolver), 5);
 
-        //Check(BuildAndEval("exists_else(context.value_have, 'nope')", resolver), "here");
-        //Check(BuildAndEval("exists_else(context.missing, 'nope')", resolver), "nope");
+        Check(BuildAndEval("exists_else(context.value_here, 'nope')", resolver), "'here'");
+        Check(BuildAndEval("exists_else(context.missing, 'nope')", resolver), "'nope'");
 
         Check(BuildAndEval("!(context.value_true)", resolver), false);
         Check(BuildAndEval("!(context.value_false)", resolver), true);

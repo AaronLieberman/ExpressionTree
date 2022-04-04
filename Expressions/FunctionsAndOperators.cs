@@ -20,12 +20,14 @@ static class FunctionsAndOperators
                     string? dataContextName = aValue != null ? Convert.ToString(aValue) : null;
                     string? propertyName = bValue != null ? Convert.ToString(bValue) : null;
 
+                    if (dataContextName == "math" && propertyName != null) return GetMathConstant(propertyName);
+
                     return dataContextName != null && propertyName != null
                         ? context.GetPropertyValue(dataContextName, propertyName)
                         : null;
                 })),
             ("_neg", 3, Associativity.Right, 1, MakeMathFunction1(a => -a, a => -a)),
-            ("!", 3, Associativity.Right, 1, MakeLogicalFunction1(a => !a)),
+            ("!", 3, Associativity.Right, 1, CatchConversions(MakeFunction1((context, a) => !ConvertUtility.TryConvertToBool(a.Evaluate(context))))),
 
             ("*", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a * b, (a, b) => a * b)),
             ("/", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a / b, (a, b) => a / b)),
@@ -39,18 +41,39 @@ static class FunctionsAndOperators
             ("-eq", 10, Associativity.Left, 2, MakeFunction2((context, a, b) => TestEquality(context, a, b))),
             ("-ne", 10, Associativity.Left, 2, MakeFunction2((context, a, b) => !TestEquality(context, a, b))),
 
-            ("&&", 14, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a && b)),
-            ("-and", 14, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a && b)),
-            ("||", 15, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a || b)),
-            ("-or", 15, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a || b)),
+            ("&&", 14, Associativity.Left, 2, MakeFunction2(LogicalAnd)),
+            ("-and", 14, Associativity.Left, 2, MakeFunction2(LogicalAnd)),
+            ("||", 15, Associativity.Left, 2, MakeFunction2(LogicalOr)),
+            ("-or", 15, Associativity.Left, 2, MakeFunction2(LogicalOr)),
 
-            (",", 17, Associativity.Left, 2, MakeFunction2((_, _, _) =>
-                throw new InvalidOperationException("Comma operators are processed during tree building, shouldn't get this far"))),
+            (",", 17, Associativity.Left, 2, (_, _) => throw new InvalidOperationException("Comma operators are processed during tree building, shouldn't get this far")),
         }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, -a.precidence, a.associativity, a.argCount, (context, args) =>
         {
             if (!VerifyArgCount(args, a.argCount)) return null;
             return a.evaluate(context, args);
         }));
+
+    static object? GetMathConstant(string propertyName)
+    {
+        return propertyName switch
+        {
+            "pi" => Math.PI,
+            "e" => Math.E,
+            _ => throw new ArgumentOutOfRangeException(nameof(propertyName), $"Unknown math property {propertyName}")
+        };
+    }
+
+    static object LogicalAnd(IEvalContext context, ExpressionTree a, ExpressionTree b)
+    {
+        return (ConvertUtility.TryConvertToBool(a.Evaluate(context)) ?? false) &&
+            (ConvertUtility.TryConvertToBool(b.Evaluate(context)) ?? false);
+    }
+
+    static object LogicalOr(IEvalContext context, ExpressionTree a, ExpressionTree b)
+    {
+        return (ConvertUtility.TryConvertToBool(a.Evaluate(context)) ?? false) ||
+            (ConvertUtility.TryConvertToBool(b.Evaluate(context)) ?? false);
+    }
 
     public static readonly Dictionary<string, FunctionInfo> Functions =
         new (string op, int argCount, Func<IEvalContext, ExpressionTree[], object?> evaluate)[]
@@ -59,7 +82,9 @@ static class FunctionsAndOperators
             ("cos", 1, MakeMathFunction1(null, a => (float)Math.Cos(a))),
             ("pow", 2, MakeMathFunction2(null, (a, b) => Math.Pow(a, b))),
             ("not_null", 1, (context, args) => args[0].Evaluate(context) != null),
+            ("exists_else", 2, MakeFunction2((context, property, elseProperty) => property.Evaluate(context) ?? elseProperty.Evaluate(context))),
             ("if_else", 3, MakeFunction3((context, cond, a, b) => Convert.ToBoolean(cond.Evaluate(context)) ? a.Evaluate(context) : b.Evaluate(context))),
+            ("_test_throw", 0, (_, _) => throw new InvalidOperationException("Throwing for test purposes")),
         }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, 0, Associativity.Left, a.argCount, (context, args) =>
         {
             if (!VerifyArgCount(args, a.argCount)) return null;
@@ -139,16 +164,6 @@ static class FunctionsAndOperators
             if (targetFunctionInt != null && aValue is int aValueInt && bValue is int bValueInt) return targetFunctionInt(aValueInt, bValueInt);
             return targetFunctionSingle(Convert.ToSingle(aValue), Convert.ToSingle(bValue));
         }));
-    }
-
-    static Func<IEvalContext, ExpressionTree[], object?> MakeLogicalFunction1(Func<bool, object> targetFunction)
-    {
-        return CatchConversions(MakeFunction1((context, a) => targetFunction(Convert.ToBoolean(a.Evaluate(context)))));
-    }
-
-    static Func<IEvalContext, ExpressionTree[], object?> MakeLogicalFunction2(Func<bool, bool, object> targetFunction)
-    {
-        return CatchConversions(MakeFunction2((context, a, b) => targetFunction(Convert.ToBoolean(a.Evaluate(context)), Convert.ToBoolean(b.Evaluate(context)))));
     }
 
     static bool VerifyArgCount(ExpressionTree[] args, int expectedArgCount)

@@ -3,6 +3,8 @@ using System.Diagnostics;
 
 namespace Expressions;
 
+enum Associativity { Left, Right }
+
 [DebuggerDisplay("{Name,nq} (args={ArgCount})")]
 struct FunctionInfo
 {

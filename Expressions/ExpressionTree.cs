@@ -8,6 +8,7 @@ namespace Expressions;
 [DebuggerDisplay("{Value,nq}, children={Children.Length}")]
 public class ExpressionTree
 {
+    // TODO store original RPN as text for debugging
     public object? Value { get; private set; }
     public Func<IEvalContext, ExpressionTree[], object?>? Function { get; private set; }
     public ExpressionTree[] Children { get; private set; } = Array.Empty<ExpressionTree>();
@@ -73,14 +74,21 @@ public class ExpressionTree
             result.Value = last.Text;
             result.Function = FunctionsAndOperators.Functions[last.Text].Evaluate;
 
-            var child = Build(rpnExpression);
-            if (child.Value != null && child.Value.Equals(","))
+            if (FunctionsAndOperators.Functions[last.Text].ArgCount == 0)
             {
-                result.Children = child.Children;
+                result.Children = Array.Empty<ExpressionTree>();
             }
             else
             {
-                result.Children = new[] { child };
+                var child = Build(rpnExpression);
+                if (child.Value != null && child.Value.Equals(","))
+                {
+                    result.Children = child.Children;
+                }
+                else
+                {
+                    result.Children = new[] {child};
+                }
             }
         }
         else if (last.Type == TokenType.Identifier)
