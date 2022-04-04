@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 
@@ -25,33 +26,14 @@ static class FunctionsAndOperators
             ("-le", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a <= b, (a, b) => a <= b)),
             ("-gt", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a > b, (a, b) => a > b)),
             ("-ge", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a >= b, (a, b) => a >= b)),
-            ("-eq", 10, Associativity.Left, 2, MakeFunction2((a, b) =>
-            {
-                var aValue = a.Evaluate();
-                var bValue = b.Evaluate();
-                return aValue == null && bValue == null
-                       || aValue != null && bValue != null && aValue.Equals(bValue);
-            })),
-            ("-ne", 10, Associativity.Left, 2, MakeFunction2((a, b) =>
-            {
-                var aValue = a.Evaluate();
-                var bValue = b.Evaluate();
-                return aValue == null && bValue != null
-                       || aValue != null && !aValue.Equals(bValue);
-            })),
+            ("-eq", 10, Associativity.Left, 2, MakeFunction2((a, b) => TestEquality(a, b))),
+            ("-ne", 10, Associativity.Left, 2, MakeFunction2((a, b) => !TestEquality(a, b))),
 
             ("&&", 14, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a && b)),
             ("||", 15, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a || b)),
 
             (",", 17, Associativity.Left, 2, MakeFunction2((a, b) =>
-            {
-                throw new NotImplementedException();
-                // combining into lists automatically is tricky because it means that we won't be able to differentiate lists variables from param lsits
-                //var result = new List<object>();
-                //result.AddRange(a is IEnumerable<object> aEnumerable ? aEnumerable : a.WrapEnumerable());
-                //result.AddRange(b is IEnumerable<object> bEnumerable ? bEnumerable : b.WrapEnumerable());
-                //return result;
-            })),
+                throw new InvalidOperationException("Comma operators are processed during tree building, shouldn't get this far"))),
         }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, -a.precidence, a.associativity, a.argCount, args =>
         {
             if (!VerifyArgCount(args, a.argCount)) return null;
@@ -75,6 +57,40 @@ static class FunctionsAndOperators
     public static FunctionInfo GetOperatorOrFunction(string name)
     {
         return Operators.ContainsKey(name) ? Operators[name] : Functions[name];
+    }
+
+    static bool TestEquality(ExpressionTree a, ExpressionTree b)
+    {
+        var aValue = a.Evaluate();
+        var bValue = b.Evaluate();
+        if (aValue == null && bValue == null) return true;
+        if ((aValue != null) != (bValue != null)) return false;
+
+        if (aValue!.GetType() == bValue!.GetType())
+        {
+            return aValue.Equals(bValue);
+        }
+
+        try
+        {
+            var aConverter = TypeDescriptor.GetConverter(aValue.GetType());
+            if (aConverter.CanConvertTo(bValue.GetType()))
+            {
+                var converted = aConverter.ConvertTo(bValue, aValue.GetType());
+                return converted != null && converted.Equals(aValue);
+            }
+            var bConverter = TypeDescriptor.GetConverter(bValue.GetType());
+            if (bConverter.CanConvertTo(aValue.GetType()))
+            {
+                var converted = bConverter.ConvertTo(aValue, bValue.GetType());
+                return converted != null && converted.Equals(bValue);
+            }
+        }
+        catch (FormatException e)
+        {
+        }
+
+        return false;
     }
 
     static Func<ExpressionTree[], object?> CatchConversions(Func<ExpressionTree[], object?> targetFunction)

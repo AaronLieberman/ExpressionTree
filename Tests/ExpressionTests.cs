@@ -114,10 +114,10 @@ public class ExpressionTests
     [Fact]
     void Conditional()
     {
-        Check(BuildAndEval("if_else(true, 'hi', 'bye')"), "hi");
-        Check(BuildAndEval("if_else(false, 'hi', 'bye')"), "bye");
-        Check(BuildAndEval("if_else(1, 'hi', 'bye')"), "hi");
-        Check(BuildAndEval("if_else(0, 'hi', 'bye')"), "bye");
+        Check(BuildAndEval("if_else(true, 'hi', 'bye')"), "'hi'");
+        Check(BuildAndEval("if_else(false, 'hi', 'bye')"), "'bye'");
+        Check(BuildAndEval("if_else(1, 'hi', 'bye')"), "'hi'");
+        Check(BuildAndEval("if_else(0, 'hi', 'bye')"), "'bye'");
 
         Check(BuildAndEval("if_else('hi' -eq 'hi', 1 + 3, 8)"), 4);
         Check(BuildAndEval("if_else('hi' -eq 'bye', 1 + 3, 8)"), 8);

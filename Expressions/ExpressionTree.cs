@@ -46,6 +46,43 @@ public class ExpressionTree
         {
             result.Value = last.Text;
         }
+        else if (FunctionsAndOperators.Operators.ContainsKey(last.Text))
+        {
+            FunctionInfo op = FunctionsAndOperators.Operators[last.Text];
+            result.Value = last.Text;
+            result.Function = op.Evaluate;
+
+            var children = new List<ExpressionTree>(op.ArgCount);
+            for (int i = 0; i < op.ArgCount; i++)
+            {
+                var child = Build(rpnExpression);
+                if (child.Value != null && child.Value.Equals(","))
+                {
+                    children.InsertRange(0, child.Children);
+                }
+                else
+                {
+                    children.Insert(0, child);
+                }
+            }
+
+            result.Children = children.ToArray();
+        }
+        else if (FunctionsAndOperators.Functions.ContainsKey(last.Text))
+        {
+            result.Value = last.Text;
+            result.Function = FunctionsAndOperators.Functions[last.Text].Evaluate;
+
+            var child = Build(rpnExpression);
+            if (child.Value != null && child.Value.Equals(","))
+            {
+                result.Children = child.Children;
+            }
+            else
+            {
+                result.Children = new[] { child };
+            }
+        }
         else if (last.Type == TokenType.Identifier)
         {
             if (last.Text.ToLowerInvariant() == "true")
@@ -60,26 +97,6 @@ public class ExpressionTree
             {
                 result.Value = last.Text;
             }
-        }
-        else if (FunctionsAndOperators.Operators.ContainsKey(last.Text))
-        {
-            FunctionInfo op = FunctionsAndOperators.Operators[last.Text];
-            result.Value = last.Text;
-            result.Function = op.Evaluate;
-
-            var children = new List<ExpressionTree>(op.ArgCount);
-            for (int i = 0; i < op.ArgCount; i++)
-            {
-                children.Insert(0, Build(rpnExpression));
-            }
-
-            result.Children = children.ToArray();
-        }
-        else if (FunctionsAndOperators.Functions.ContainsKey(last.Text))
-        {
-            result.Value = last.Text;
-            result.Function = FunctionsAndOperators.Functions[last.Text].Evaluate;
-            result.Children = new[] { Build(rpnExpression) };
         }
 
         return result;
