@@ -2,9 +2,9 @@
 using System.Diagnostics;
 using Xunit;
 
-namespace Expressions.Tests;
-
 #pragma warning disable IDE0051
+
+namespace Expressions.Tests;
 
 public class ExpressionTests
 {
