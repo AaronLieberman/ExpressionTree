@@ -9,7 +9,7 @@ namespace Expressions;
 public class ExpressionTree
 {
     public object? Value { get; private set; }
-    public Func<ExpressionTree[], object?>? Function { get; private set; }
+    public Func<IEvalContext, ExpressionTree[], object?>? Function { get; private set; }
     public ExpressionTree[] Children { get; private set; } = Array.Empty<ExpressionTree>();
 
     public static ExpressionTree Build(string expression)
@@ -102,10 +102,10 @@ public class ExpressionTree
         return result;
     }
 
-    public object? Evaluate(IPropertyResolver? propertyResolver = null)
+    public object? Evaluate(IEvalContext evalContext)
     {
         return Function != null
-            ? Function(Children.ToArray())
+            ? Function(evalContext, Children.ToArray())
             : Value;
     }
 }

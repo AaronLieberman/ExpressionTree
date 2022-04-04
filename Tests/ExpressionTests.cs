@@ -15,9 +15,9 @@ public class ExpressionTests
         if (o is T) Assert.Equal(v, o);
     }
 
-    static object? BuildAndEval(string expression, IPropertyResolver? propertyResolver = null)
+    static object? BuildAndEval(string expression, IEvalContext? propertyResolver = null)
     {
-        return ExpressionTree.Build(expression).Evaluate(propertyResolver);
+        return ExpressionTree.Build(expression).Evaluate(propertyResolver ?? new EvalContext());
     }
 
     [Fact]
@@ -89,6 +89,16 @@ public class ExpressionTests
         Check(BuildAndEval("true || false"), true);
         Check(BuildAndEval("false || false"), false);
         Check(BuildAndEval("!true || !false"), true);
+        Check(BuildAndEval("true -and true"), true);
+        Check(BuildAndEval("false -and true"), false);
+        Check(BuildAndEval("true -and false"), false);
+        Check(BuildAndEval("false -and false"), false);
+        Check(BuildAndEval("!true -and !false"), false);
+        Check(BuildAndEval("true -or true"), true);
+        Check(BuildAndEval("false -or true"), true);
+        Check(BuildAndEval("true -or false"), true);
+        Check(BuildAndEval("false -or false"), false);
+        Check(BuildAndEval("!true -or !false"), true);
     }
 
     [Fact]
@@ -124,7 +134,7 @@ public class ExpressionTests
         Check(BuildAndEval("if_else('hi' -eq 'bye', 1 + 3, 8)"), 8);
     }
 
-    class FakePropertyResolver : IPropertyResolver
+    class FakeEvalContext : IEvalContext
     {
         readonly Dictionary<string, object?> _values = new();
 
@@ -145,7 +155,7 @@ public class ExpressionTests
     [Fact]
     void Properties()
     {
-        var resolver = new FakePropertyResolver();
+        var resolver = new FakeEvalContext();
         resolver.Add("context", "value_3", 3);
         resolver.Add("context", "value_have", "here");
         resolver.Add("context", "value_true", true);
@@ -157,17 +167,15 @@ public class ExpressionTests
         Check(BuildAndEval("cOnTeXt.VaLuE_true", resolver), true);
         Check(BuildAndEval("context.value_false", resolver), false);
         Check(BuildAndEval("cOnTeXt.VaLuE_false", resolver), false);
-        Check(BuildAndEval("exists(context.value_3)", resolver), true);
-        Check(BuildAndEval("eXiStS(cOnTeXt.VaLuE_3)", resolver), true);
-        Check(BuildAndEval("exists(context.missing)", resolver), false);
-        Check(BuildAndEval("eXiStS(cOnTeXt.MiSsInG)", resolver), false);
-        Check(BuildAndEval("exists_else(context.value_3, 4)", resolver), 3);
-        Check(BuildAndEval("exists_else(context.missing, 5)", resolver), 5);
+        Check(BuildAndEval("not_null(context.value_3)", resolver), true);
+        Check(BuildAndEval("not_null(cOnTeXt.VaLuE_3)", resolver), true);
+        Check(BuildAndEval("not_null(context.missing)", resolver), false);
+        Check(BuildAndEval("not_null(cOnTeXt.MiSsInG)", resolver), false);
+        //Check(BuildAndEval("exists_else(context.value_3, 4)", resolver), 3);
+        //Check(BuildAndEval("exists_else(context.missing, 5)", resolver), 5);
 
-        Check(BuildAndEval("exists_else(context.value_have, 'nope')", resolver), "here");
-        Check(BuildAndEval("exists_else(context.missing, 'nope')", resolver), "nope");
-        Check(BuildAndEval("not(context.value_true)", resolver), false);
-        Check(BuildAndEval("not(context.value_false)", resolver), true);
+        //Check(BuildAndEval("exists_else(context.value_have, 'nope')", resolver), "here");
+        //Check(BuildAndEval("exists_else(context.missing, 'nope')", resolver), "nope");
 
         Check(BuildAndEval("!(context.value_true)", resolver), false);
         Check(BuildAndEval("!(context.value_false)", resolver), true);
