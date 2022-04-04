@@ -1,19 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Expressions;
 
 public interface IEvalContext
 {
-    object? GetPropertyValue(string key, string propertyName);
+    object? GetPropertyValue(string propertyName);
 }
 
 public class EvalContext : IEvalContext
 {
-    public object? GetPropertyValue(string key, string propertyName)
+    public object? GetPropertyValue(string propertyName)
     {
         throw new NotImplementedException();
     }

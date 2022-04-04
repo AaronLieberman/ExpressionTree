@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using Core.Linq;
 
 namespace Expressions;
 
@@ -17,14 +18,21 @@ static class FunctionsAndOperators
                 {
                     object? aValue = a.Evaluate(context);
                     object? bValue = b.Evaluate(context);
-                    string? dataContextName = aValue != null ? Convert.ToString(aValue) : null;
-                    string? propertyName = bValue != null ? Convert.ToString(bValue) : null;
 
-                    if (dataContextName == "math" && propertyName != null) return GetMathConstant(propertyName);
+                    if (aValue is not IDictionary<string, object?> dictionary)
+                        throw new KeyNotFoundException("Couldn't dereference dictionary {0}".FormatWith(a.Value?.ToString() ?? "<unknown>"));
 
-                    return dataContextName != null && propertyName != null
-                        ? context.GetPropertyValue(dataContextName, propertyName)
-                        : null;
+                    var propertyName = ConvertUtility.TryConvertToString(bValue);
+                    if (propertyName == null)
+                        throw new KeyNotFoundException("Couldn't dereference {0}.{1}".FormatWith(a.Value?.ToString() ?? "<unknown>", b.Value?.ToString() ?? "<unknown>"));
+
+                    if (dictionary.TryGetValue(propertyName, out object? value))
+                    {
+                        throw new KeyNotFoundException(
+                            "Couldn't find property {0}.{1}".FormatWith(a.Value?.ToString() ?? "<unknown>", b.Value?.ToString() ?? "<unknown>"));
+                    }
+
+                    return value;
                 })),
             ("_neg", 3, Associativity.Right, 1, MakeMathFunction1(a => -a, a => -a)),
             ("!", 3, Associativity.Right, 1, CatchConversions(MakeFunction1((context, a) => !ConvertUtility.TryConvertToBool(a.Evaluate(context))))),
@@ -52,16 +60,6 @@ static class FunctionsAndOperators
             if (!VerifyArgCount(args, a.argCount)) return null;
             return a.evaluate(context, args);
         }));
-
-    static object? GetMathConstant(string propertyName)
-    {
-        return propertyName switch
-        {
-            "pi" => Math.PI,
-            "e" => Math.E,
-            _ => throw new ArgumentOutOfRangeException(nameof(propertyName), $"Unknown math property {propertyName}")
-        };
-    }
 
     static object LogicalAnd(IEvalContext context, ExpressionTree a, ExpressionTree b)
     {

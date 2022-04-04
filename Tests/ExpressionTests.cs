@@ -24,18 +24,17 @@ public class ExpressionTests
 
     class FakeEvalContext : IEvalContext
     {
-        readonly Dictionary<string, object?> _values = new();
+        readonly Dictionary<string, Dictionary<string, object?>> _values = new();
 
         public void Add(string dataContextName, string propertyName, object? value)
         {
-            string key = (dataContextName + "." + propertyName).ToLowerInvariant();
-            _values[key] = value;
+            if (!_values.ContainsKey(dataContextName)) _values[dataContextName] = new Dictionary<string, object?>();
+            _values[dataContextName][propertyName] = value;
         }
 
-        public object? GetPropertyValue(string dataContextName, string propertyName)
+        public object? GetPropertyValue(string propertyName)
         {
-            string key = (dataContextName + "." + propertyName).ToLowerInvariant();
-            return _values.TryGetValue(key, out object? result) ? result : null;
+            return _values[propertyName];
         }
     }
 
@@ -152,7 +151,6 @@ public class ExpressionTests
     void SimpleFunction()
     {
         Assert.InRange(Convert.ToSingle(BuildAndEval("sin(1.57)")), .9, 1.1);
-        Assert.InRange(Convert.ToSingle(BuildAndEval("sin(math.pi / 2)")), .9, 1.1);
         Assert.Throws<InvalidOperationException>(() => BuildAndEval("_test_throw"));
     }
 
