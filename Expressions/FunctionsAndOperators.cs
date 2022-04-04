@@ -14,8 +14,8 @@ static class FunctionsAndOperators
         new (string op, int precidence, Associativity associativity, int argCount, Func<object?[], object?> evaluate)[]
         {
             (".", 2, Associativity.Left, 2, args => throw new NotImplementedException()),
-            ("_neg", 3, Associativity.Left, 1, MakeMathFunction1(a => -a)),
-            ("!", 3, Associativity.Left, 1, MakeLogicalFunction1(a => !a)),
+            ("_neg", 3, Associativity.Right, 1, MakeMathFunction1(a => -a)),
+            ("!", 3, Associativity.Right, 1, MakeLogicalFunction1(a => !a)),
 
             ("*", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a * b)),
             ("/", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a / b)),
