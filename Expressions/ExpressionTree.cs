@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 
 namespace Expressions;
 
+[DebuggerDisplay("{Value,nq}, children={Children.Length}")]
 public class ExpressionTree
 {
-    readonly List<ExpressionTree> _children = new();
-
     public object? Value { get; private set; }
-    public Func<object?[], object?>? Function { get; private set; }
-    public IEnumerable<ExpressionTree> Children => _children;
+    public Func<ExpressionTree[], object?>? Function { get; private set; }
+    public ExpressionTree[] Children { get; private set; } = Array.Empty<ExpressionTree>();
 
     public static ExpressionTree Build(string expression)
     {
@@ -66,16 +66,20 @@ public class ExpressionTree
             FunctionInfo op = FunctionsAndOperators.Operators[last.Text];
             result.Value = last.Text;
             result.Function = op.Evaluate;
+
+            var children = new List<ExpressionTree>(op.ArgCount);
             for (int i = 0; i < op.ArgCount; i++)
             {
-                result._children.Add(Build(rpnExpression));
+                children.Insert(0, Build(rpnExpression));
             }
+
+            result.Children = children.ToArray();
         }
         else if (FunctionsAndOperators.Functions.ContainsKey(last.Text))
         {
             result.Value = last.Text;
             result.Function = FunctionsAndOperators.Functions[last.Text].Evaluate;
-            result._children.Add(Build(rpnExpression));
+            result.Children = new[] { Build(rpnExpression) };
         }
 
         return result;
@@ -83,9 +87,8 @@ public class ExpressionTree
 
     public object? Evaluate()
     {
-        //return Function != null
-        //    ? Function(Children.Select(a => a))
-        //    : Value;
-        throw new NotImplementedException();
+        return Function != null
+            ? Function(Children.ToArray())
+            : Value;
     }
 }

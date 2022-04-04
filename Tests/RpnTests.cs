@@ -32,6 +32,7 @@ public class RpnTests
         ParseAndVerify("(1 + 2) * 3", "1 2 + 3 *");
         ParseAndVerify("((1 + 2) * 3) + 4", "1 2 + 3 * 4 +");
         ParseAndVerify("1 + ((2 * 3) + 4)", "1 2 3 * 4 + +");
+        ParseAndVerify("3 + 10 * 4 / 2 - 1", "3 10 4 * 2 / + 1 -");
     }
 
     [Fact]

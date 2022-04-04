@@ -10,9 +10,9 @@ struct FunctionInfo
     public int Precidence { get; }
     public Associativity Associativity { get; }
     public int ArgCount { get; }
-    public Func<object?[], object?> Evaluate { get; }
+    public Func<ExpressionTree[], object?> Evaluate { get; }
 
-    public FunctionInfo(string name, int precidence, Associativity associativity, int argCount, Func<object?[], object?> evaluate)
+    public FunctionInfo(string name, int precidence, Associativity associativity, int argCount, Func<ExpressionTree[], object?> evaluate)
     {
         Name = name;
         Precidence = precidence;
