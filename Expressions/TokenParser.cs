@@ -5,6 +5,17 @@ using System.Text.RegularExpressions;
 
 namespace Expressions;
 
+enum TokenType
+{
+    Identifier, Number, Operator, String
+}
+
+struct Token
+{
+    public TokenType Type;
+    public string Text;
+}
+
 class TokenParser
 {
     static readonly char[] _operatorChars;
@@ -22,16 +33,18 @@ class TokenParser
         _expression = Regex.Replace(expression, "\\s+", " ");
     }
 
-    string? ConsumeIf(Func<char, bool> matchChar)
+    bool ConsumeIf(Func<char, bool> matchChar, out string s)
     {
+        s = "";
         int start = _index;
-        if (_index >= _expression.Length || !matchChar(_expression[_index])) return null;
+        if (_index >= _expression.Length || !matchChar(_expression[_index])) return false;
         while (_index < _expression.Length && matchChar(_expression[_index]))
         {
             _index++;
         }
 
-        return _expression.Substring(start, _index - start);
+        s = _expression.Substring(start, _index - start);
+        return true;
     }
 
     static bool IsWordChar(char c, bool isFirstChar)
@@ -51,9 +64,10 @@ class TokenParser
         return _operatorChars.Contains(c);
     }
 
-    string? ConsumeIfString()
+    bool ConsumeIfString(out string s)
     {
-        if (_index >= _expression.Length || _expression[_index] is not '\'' and not '"') return null;
+        s = "";
+        if (_index >= _expression.Length || _expression[_index] is not '\'' and not '"') return false;
         char quoteChar = _expression[_index];
 
         int start = _index;
@@ -69,7 +83,8 @@ class TokenParser
 
         if (_index < _expression.Length) _index++;
 
-        return _expression.Substring(start, _index - start);
+        s = _expression.Substring(start, _index - start);
+        return true;
     }
 
     void SkipWhitespace()
@@ -80,20 +95,36 @@ class TokenParser
         }
     }
 
-    public string? NextToken()
+    public bool NextToken(out Token token)
     {
         SkipWhitespace();
         int start = _index;
 
-        string? s = ConsumeIf(c => IsWordChar(c, _index == start));
-        if (s != null) return s;
-        s = ConsumeIf(IsNumericChar);
-        if (s != null) return s;
-        s = ConsumeIf(IsOperatorChar);
-        if (s != null) return s;
-        s = ConsumeIfString();
-        if (s != null) return s;
+        if (ConsumeIf(c => IsWordChar(c, _index == start), out string s))
+        {
+            token = new Token { Type = TokenType.Identifier, Text = s };
+            return true;
+        }
 
-        return null;
+        if (ConsumeIf(IsNumericChar, out s))
+        {
+            token = new Token {Type = TokenType.Number, Text = s};
+            return true;
+        }
+
+        if (ConsumeIf(IsOperatorChar, out s))
+        {
+            token = new Token { Type = TokenType.Operator, Text = s };
+            return true;
+        }
+
+        if (ConsumeIfString(out s))
+        {
+            token = new Token { Type = TokenType.String, Text = s };
+            return true;
+        }
+
+        token = new Token();
+        return false;
     }
 }
