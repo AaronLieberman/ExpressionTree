@@ -86,7 +86,7 @@ static class FunctionsAndOperators
                 return converted != null && converted.Equals(bValue);
             }
         }
-        catch (FormatException e)
+        catch (FormatException)
         {
         }
 

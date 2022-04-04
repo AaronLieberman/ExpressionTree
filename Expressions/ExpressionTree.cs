@@ -102,7 +102,7 @@ public class ExpressionTree
         return result;
     }
 
-    public object? Evaluate()
+    public object? Evaluate(IPropertyResolver? propertyResolver = null)
     {
         return Function != null
             ? Function(Children.ToArray())
