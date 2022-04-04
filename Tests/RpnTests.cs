@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -17,49 +18,88 @@ public class RpnTests
         Assert.Equal(expected, actual);
     }
 
+    [DebuggerHidden]
+    static void ParseAndVerify(string expression, string expectedRpn)
+    {
+        VerifyRpn(ExpressionParser.ParseExpressionToRpn(expression), expectedRpn);
+    }
+
     [Fact]
     void BasicMath()
     {
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 + 2"), "1 2 +");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 + 2 + 3"), "1 2 + 3 +");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1+2+3"), "1 2 + 3 +");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 * 2 + 3"), "1 2 * 3 +");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 + 2 * 3"), "1 2 3 * +");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("(1 + 2) * 3"), "1 2 + 3 *");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("((1 + 2) * 3) + 4"), "1 2 + 3 * 4 +");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 + ((2 * 3) + 4)"), "1 2 3 * 4 + +");
+        ParseAndVerify("1 + 2", "1 2 +");
+        ParseAndVerify("1 + 2 + 3", "1 2 + 3 +");
+        ParseAndVerify("1+2+3", "1 2 + 3 +");
+        ParseAndVerify("1 * 2 + 3", "1 2 * 3 +");
+        ParseAndVerify("1 + 2 * 3", "1 2 3 * +");
+        ParseAndVerify("(1 + 2) * 3", "1 2 + 3 *");
+        ParseAndVerify("((1 + 2) * 3) + 4", "1 2 + 3 * 4 +");
+        ParseAndVerify("1 + ((2 * 3) + 4)", "1 2 3 * 4 + +");
     }
 
     [Fact]
     void Logic()
     {
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 && 2"), "1 2 &&");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 || 2"), "1 2 ||");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 && 2 || 3 && 4"), "1 2 && 3 4 && ||");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 || 2 && 3 || 4"), "1 2 3 && || 4 ||");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 && 2 -eq 3 || 4"), "1 2 3 -eq && 4 ||");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 || 2 -eq 3 && 4"), "1 2 3 -eq 4 && ||");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 -eq 2 || 3 -ne 4"), "1 2 -eq 3 4 -ne ||");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 && 2 -eq 3 || 4"), "1 2 3 -eq && 4 ||");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 && 2 -eq 3 -ne 4"), "1 2 3 -eq 4 -ne &&");
+        ParseAndVerify("1 && 2", "1 2 &&");
+        ParseAndVerify("1 || 2", "1 2 ||");
+        ParseAndVerify("1 && 2 || 3 && 4", "1 2 && 3 4 && ||");
+        ParseAndVerify("1 || 2 && 3 || 4", "1 2 3 && || 4 ||");
+        ParseAndVerify("1 && 2 -eq 3 || 4", "1 2 3 -eq && 4 ||");
+        ParseAndVerify("1 || 2 -eq 3 && 4", "1 2 3 -eq 4 && ||");
+        ParseAndVerify("1 -eq 2 || 3 -ne 4", "1 2 -eq 3 4 -ne ||");
+        ParseAndVerify("1 && 2 -eq 3 || 4", "1 2 3 -eq && 4 ||");
+        ParseAndVerify("1 && 2 -eq 3 -ne 4", "1 2 3 -eq 4 -ne &&");
     }
 
     [Fact]
     void Text()
     {
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("1 + '321 bye don\\'t'"), "1 '321 bye don\\'t' +");
-        VerifyRpn(ExpressionParser.ParseExpressionToRpn("\"bye\" - \"'hi'\" && '\"foo\"'"), "\"bye\" \"'hi'\" - '\"foo\"' &&");
+        ParseAndVerify("1 + '321 bye don\\'t'", "1 '321 bye don\\'t' +");
+        ParseAndVerify("\"bye\" - \"'hi'\" && '\"foo\"'", "\"bye\" \"'hi'\" - '\"foo\"' &&");
     }
 
     [Fact]
-    void Functions()
+    void Unary()
     {
+        ParseAndVerify("1 - 2", "1 2 -");
+        ParseAndVerify("1 + -2", "1 2 _neg +");
+        ParseAndVerify("-1 - -2", "1 _neg 2 _neg -");
+        ParseAndVerify("(-3 * -4) - 1", "3 _neg 4 _neg * 1 -");
+        ParseAndVerify("4 / -(3)", "4 3 _neg /");
+        ParseAndVerify("4 / (-3)", "4 3 _neg /");
         
+        ParseAndVerify("4 / (+3)", "4 3 /");
+        ParseAndVerify("4 / +3", "4 3 /");
+
+        ParseAndVerify("!true || !false", "true ! false ! ||");
+    }
+
+    [Fact]
+    void SimpleFunctions()
+    {
+        ParseAndVerify("2 * sin(x) + cos 3", "2 x sin * 3 cos +");
+        ParseAndVerify("2 + sin(x) * cos 3", "2 x sin 3 cos * +");
+    }
+
+    [Fact]
+    void Lists()
+    {
+        ParseAndVerify("1, 2", "1 2 ,");
+        ParseAndVerify("1, (2, 3), 4", "1 2 3 , , 4 ,");
+    }
+
+    [Fact]
+    void MultiParamFunctions()
+    {
+        ParseAndVerify("pow(2, 3)", "2 3 , pow");
+        ParseAndVerify("pow 2, 3", "2 3 , pow");
+        ParseAndVerify("if_else(true, 1, 3)", "true 1 , 3 , if_else");
     }
 
     [Fact]
     void Identifiers()
     {
-        throw new NotImplementedException();
+        ParseAndVerify("hello + goodbye - foo", "hello goodbye + bye -");
+        ParseAndVerify("hello + goodbye - foo.bar.baz", "hello goodbye + foo bar . baz .");
     }
 }

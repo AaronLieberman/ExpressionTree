@@ -14,14 +14,20 @@ class ExpressionParser
         var output = new List<Token>();
         var operators = new Stack<Token>();
 
+        bool lastTokenWasOperator = true;
         Token? readToken;
         while ((readToken = p.NextToken()) != null)
         {
             Token token = readToken.Value;
 
+            string opName = token.Text;
+            if (lastTokenWasOperator && opName == "-") token = new Token() { Text = "_neg", Type = TokenType.Operator };
+            if (lastTokenWasOperator && opName == "+") continue;
+
             if (token.Type is TokenType.Number or TokenType.String)
             {
                 output.Add(token);
+                lastTokenWasOperator = false;
             }
             else if (token.Type == TokenType.Identifier)
             {
@@ -33,10 +39,12 @@ class ExpressionParser
                 {
                     output.Add(token);
                 }
+                lastTokenWasOperator = false;
             }
             else if (token.Text == "(")
             {
                 operators.Push(token);
+                lastTokenWasOperator = true;
             }
             else if (token.Text == ")")
             {
@@ -52,6 +60,7 @@ class ExpressionParser
                 {
                     output.Add(operators.Pop());
                 }
+                lastTokenWasOperator = false;
             }
             else if (token.Type == TokenType.Operator)
             {
@@ -64,6 +73,7 @@ class ExpressionParser
                 }
 
                 operators.Push(token);
+                lastTokenWasOperator = true;
             }
         }
 
