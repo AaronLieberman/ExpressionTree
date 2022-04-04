@@ -1,6 +1,7 @@
-﻿
+﻿using System.Collections.Generic;
 
 // ReSharper disable once CheckNamespace
+
 namespace Core.Linq;
 
 public static class ObjectExtensions

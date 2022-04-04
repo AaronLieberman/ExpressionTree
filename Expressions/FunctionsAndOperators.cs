@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Core.Linq;
 
 namespace Expressions;
 
@@ -15,22 +16,29 @@ static class FunctionsAndOperators
             (".", 2, Associativity.Left, 2, args => throw new NotImplementedException()),
             ("_neg", 3, Associativity.Left, 1, MakeMathFunction1(a => -a)),
             ("!", 3, Associativity.Left, 1, MakeLogicalFunction1(a => !a)),
+
             ("*", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a * b)),
             ("/", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a / b)),
             ("+", 6, Associativity.Left, 2, MakeMathFunction2((a, b) => a + b)),
             ("-", 6, Associativity.Left, 2, MakeMathFunction2((a, b) => a - b)),
+
             ("-lt", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a < b)),
             ("-le", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a <= b)),
             ("-gt", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a > b)),
             ("-ge", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a >= b)),
             ("-eq", 10, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a == b)),
             ("-ne", 11, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a != b)),
+
             ("&&", 14, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a && b)),
             ("||", 15, Associativity.Left, 2, MakeLogicalFunction2((a, b) => a || b)),
-            (",", 17, Associativity.Left, 2, args =>
+
+            (",", 17, Associativity.Left, 2, MakeFunction2((a, b) =>
             {
-                
-            }),
+                var result = new List<object>();
+                result.AddRange(a is IEnumerable<object> aEnumerable ? aEnumerable : a.WrapEnumerable());
+                result.AddRange(b is IEnumerable<object> bEnumerable ? bEnumerable : b.WrapEnumerable());
+                return result;
+            })),
         }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, -a.precidence, a.associativity, a.argCount, args =>
         {
             if (a.argCount != 0 && !VerifyFunctionArgs(args, a.argCount)) return null;
@@ -42,7 +50,7 @@ static class FunctionsAndOperators
         {
             ("sin", 1, MakeMathFunction1(a => (float)Math.Sin(a))),
             ("cos", 1, MakeMathFunction1(a => (float)Math.Cos(a))),
-            ("pow", 2, MakeMathFunction2((a, b) => a * b)),
+            ("pow", 2, MakeMathFunction2((a, b) => Math.Pow(a, b))),
             ("not_null", 1, args => args[0] != null),
             ("if_else", 3, MakeFunction3((cond, a, b) => Convert.ToBoolean(cond) ? a  : b)),
         }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, 0, Associativity.Left, a.argCount, args =>

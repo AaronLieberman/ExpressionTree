@@ -64,11 +64,22 @@ class ExpressionParser
             }
             else if (token.Type == TokenType.Operator)
             {
-                var op = FunctionsAndOperators.Operators[token.Text];
-                while (operators.Any() && operators.Peek().Text != "(" &&
-                       (FunctionsAndOperators.Operators[operators.Peek().Text].Precidence > op.Precidence ||
-                       (op.Associativity == Associativity.Left && FunctionsAndOperators.Operators[operators.Peek().Text].Precidence == op.Precidence)))
+                FunctionInfo op = FunctionsAndOperators.Operators[token.Text];
+                while (true)
                 {
+                    bool existingOpHasHigherPrescidence = false;
+
+                    if (operators.Any() && operators.Peek().Text != "(")
+                    {
+                        var existingOperator = FunctionsAndOperators.Operators.ContainsKey(operators.Peek().Text)
+                            ? FunctionsAndOperators.Operators[operators.Peek().Text]
+                            : FunctionsAndOperators.Functions[operators.Peek().Text];
+                        existingOpHasHigherPrescidence = existingOperator.Precidence > op.Precidence ||
+                            (op.Associativity == Associativity.Left && existingOperator.Precidence == op.Precidence);
+                    }
+
+                    if (!existingOpHasHigherPrescidence) break;
+
                     output.Add(operators.Pop());
                 }
 

@@ -92,14 +92,14 @@ public class RpnTests
     void MultiParamFunctions()
     {
         ParseAndVerify("pow(2, 3)", "2 3 , pow");
-        ParseAndVerify("pow 2, 3", "2 3 , pow");
+        ParseAndVerify("pow 2, 3", "2 pow 3 ,");
         ParseAndVerify("if_else(true, 1, 3)", "true 1 , 3 , if_else");
     }
 
     [Fact]
     void Identifiers()
     {
-        ParseAndVerify("hello + goodbye - foo", "hello goodbye + bye -");
-        ParseAndVerify("hello + goodbye - foo.bar.baz", "hello goodbye + foo bar . baz .");
+        ParseAndVerify("hello + goodbye - bye", "hello goodbye + bye -");
+        ParseAndVerify("hello + goodbye - foo.bar.baz", "hello goodbye + foo bar . baz . -");
     }
 }

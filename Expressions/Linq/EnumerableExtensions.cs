@@ -36,4 +36,9 @@ public static class EnumerableExtensions
             action(item);
         }
     }
+
+    public static IEnumerable<T> WrapEnumerable<T>(this T t)
+    {
+        yield return t;
+    }
 }
