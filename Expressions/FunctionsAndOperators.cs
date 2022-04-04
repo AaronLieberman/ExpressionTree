@@ -34,10 +34,12 @@ static class FunctionsAndOperators
 
             (",", 17, Associativity.Left, 2, MakeFunction2((a, b) =>
             {
-                var result = new List<object>();
-                result.AddRange(a is IEnumerable<object> aEnumerable ? aEnumerable : a.WrapEnumerable());
-                result.AddRange(b is IEnumerable<object> bEnumerable ? bEnumerable : b.WrapEnumerable());
-                return result;
+                throw new NotImplementedException();
+                // combining into lists automatically is tricky because it means that we won't be able to differentiate lists variables from param lsits
+                //var result = new List<object>();
+                //result.AddRange(a is IEnumerable<object> aEnumerable ? aEnumerable : a.WrapEnumerable());
+                //result.AddRange(b is IEnumerable<object> bEnumerable ? bEnumerable : b.WrapEnumerable());
+                //return result;
             })),
         }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, -a.precidence, a.associativity, a.argCount, args =>
         {
@@ -58,6 +60,11 @@ static class FunctionsAndOperators
             if (a.argCount != 0 && !VerifyFunctionArgs(args, a.argCount)) return null;
             return a.evaluate(args);
         }));
+
+    public static FunctionInfo GetOperatorOrFunction(string name)
+    {
+        return Operators.ContainsKey(name) ? Operators[name] : Functions[name];
+    }
 
     static Func<object?[], object?> CatchConversions(Func<object?[], object?> targetFunction)
     {

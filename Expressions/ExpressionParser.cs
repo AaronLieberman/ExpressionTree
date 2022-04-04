@@ -70,9 +70,7 @@ class ExpressionParser
 
                     if (operators.Any() && operators.Peek().Text != "(")
                     {
-                        var existingOperator = FunctionsAndOperators.Operators.ContainsKey(operators.Peek().Text)
-                            ? FunctionsAndOperators.Operators[operators.Peek().Text]
-                            : FunctionsAndOperators.Functions[operators.Peek().Text];
+                        FunctionInfo existingOperator = FunctionsAndOperators.GetOperatorOrFunction(operators.Peek().Text);
                         existingOpHasHigherPrescidence = existingOperator.Precidence > op.Precidence ||
                             (op.Associativity == Associativity.Left && existingOperator.Precidence == op.Precidence);
                     }
