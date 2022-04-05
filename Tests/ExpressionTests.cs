@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Core.Linq;
 using Xunit;
 
 #pragma warning disable IDE0051
@@ -32,13 +33,20 @@ public class ExpressionTests
             _values[dataContextName][propertyName] = value;
         }
 
-        public object? GetPropertyValue(string propertyName)
+        public void Add(string dataContextName, string subDataContextName, string propertyName, object? value)
         {
-            return _values[propertyName];
+            if (!_values.ContainsKey(dataContextName)) _values[dataContextName] = new Dictionary<string, object?>();
+            if (!_values[dataContextName].ContainsKey(subDataContextName)) _values[dataContextName][subDataContextName] = new Dictionary<string, object?>();
+            _values[dataContextName][subDataContextName]!.To<Dictionary<string, object?>>()[propertyName] = value;
+        }
+
+        public IDictionary<string, object?>? TryGetObject(string propertyName)
+        {
+            return _values.TryGetValue(propertyName, out Dictionary<string, object?>? dictionary) ? dictionary : null;
         }
     }
 
-#endregion
+    #endregion
 
     [Fact]
     void Constants()
@@ -178,6 +186,7 @@ public class ExpressionTests
         resolver.Add("context", "value_here", "'here'");
         resolver.Add("context", "value_true", true);
         resolver.Add("context", "value_false", false);
+        resolver.Add("context", "object", "foo", "'bar'");
 
         Check(BuildAndEval("context.value_3", resolver), 3);
         Check(BuildAndEval("cOnTeXt.VaLuE_3", resolver), 3);
@@ -198,5 +207,7 @@ public class ExpressionTests
         Check(BuildAndEval("!(context.value_true)", resolver), false);
         Check(BuildAndEval("!(context.value_false)", resolver), true);
         Check(BuildAndEval("!context.value_true", resolver), false);
+
+        Check(BuildAndEval("context.if_else(true, object, none).foo", resolver), "'bar'");
     }
 }

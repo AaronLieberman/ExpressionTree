@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text;
 
 namespace Expressions;
 
 [DebuggerDisplay("{Value,nq}, children={Children.Length}")]
 public class ExpressionTree
 {
-    // TODO store original RPN as text for debugging
     public object? Value { get; private set; }
     public Func<IEvalContext, ExpressionTree[], object?>? Function { get; private set; }
     public ExpressionTree[] Children { get; private set; } = Array.Empty<ExpressionTree>();
+    internal Token Token { get; private init; }
 
     public static ExpressionTree Build(string expression)
     {
@@ -25,9 +26,10 @@ public class ExpressionTree
 
     static ExpressionTree Build(Stack<Token> rpnExpression)
     {
-        var result = new ExpressionTree();
-
         Token last = rpnExpression.Pop();
+
+        var result = new ExpressionTree { Token = last };
+
         if (last.Type == TokenType.Number)
         {
             if (int.TryParse(last.Text, out int parsedInt))
@@ -87,7 +89,7 @@ public class ExpressionTree
                 }
                 else
                 {
-                    result.Children = new[] {child};
+                    result.Children = new[] { child };
                 }
             }
         }
@@ -115,5 +117,17 @@ public class ExpressionTree
         return Function != null
             ? Function(evalContext, Children.ToArray())
             : Value;
+    }
+
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.Append(Token.Text);
+        foreach (var child in Children)
+        {
+            sb.Append(' ');
+            sb.Append(child);
+        }
+        return sb.ToString();
     }
 }

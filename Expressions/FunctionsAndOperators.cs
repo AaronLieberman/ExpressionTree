@@ -19,20 +19,23 @@ static class FunctionsAndOperators
                     object? aValue = a.Evaluate(context);
                     object? bValue = b.Evaluate(context);
 
+                    // first try to interpret the object as a dictionary
                     if (aValue is not IDictionary<string, object?> dictionary)
-                        throw new KeyNotFoundException("Couldn't dereference dictionary {0}".FormatWith(a.Value?.ToString() ?? "<unknown>"));
-
-                    var propertyName = ConvertUtility.TryConvertToString(bValue);
-                    if (propertyName == null)
-                        throw new KeyNotFoundException("Couldn't dereference {0}.{1}".FormatWith(a.Value?.ToString() ?? "<unknown>", b.Value?.ToString() ?? "<unknown>"));
-
-                    if (dictionary.TryGetValue(propertyName, out object? value))
                     {
-                        throw new KeyNotFoundException(
-                            "Couldn't find property {0}.{1}".FormatWith(a.Value?.ToString() ?? "<unknown>", b.Value?.ToString() ?? "<unknown>"));
+                        // if that fails, try to convert to an object name and see if we can get a dictionary out of it
+                        string? objectName = ConvertUtility.TryConvertToString(aValue);
+                        if (objectName == null)
+                            throw new KeyNotFoundException("Couldn't interpret {0} as a dictionary or string".FormatWith(a));
+
+                        dictionary = context.TryGetObject(objectName.ToLowerInvariant())
+                            ?? throw new KeyNotFoundException("Couldn't find dictionary {0}".FormatWith(a));
                     }
 
-                    return value;
+                    string? propertyName = ConvertUtility.TryConvertToString(bValue);
+                    if (propertyName == null)
+                        throw new KeyNotFoundException("Couldn't convert identifier \"{0}\" to a string".FormatWith(b));
+
+                    return dictionary.TryGetValue(propertyName.ToLowerInvariant(), out object? value) ? value : null;
                 })),
             ("_neg", 3, Associativity.Right, 1, MakeMathFunction1(a => -a, a => -a)),
             ("!", 3, Associativity.Right, 1, CatchConversions(MakeFunction1((context, a) => !ConvertUtility.TryConvertToBool(a.Evaluate(context))))),
