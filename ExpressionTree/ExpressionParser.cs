@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 
-namespace Expressions;
+namespace ExpressionTree;
 
 class ExpressionParser
 {

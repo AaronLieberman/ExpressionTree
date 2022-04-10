@@ -5,7 +5,7 @@ using Xunit;
 
 #pragma warning disable IDE0051
 
-namespace Expressions.Tests;
+namespace ExpressionTree.Tests;
 
 public class RpnTests
 {

@@ -4,7 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 
-namespace Expressions;
+namespace ExpressionTree;
 
 [DebuggerDisplay("{Value,nq}, children={Children.Length}")]
 public class ExpressionTree

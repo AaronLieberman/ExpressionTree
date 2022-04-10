@@ -5,7 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using Core.Linq;
 
-namespace Expressions;
+namespace ExpressionTree;
 
 static class FunctionsAndOperators
 {

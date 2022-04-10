@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Expressions;
+namespace ExpressionTree;
 
 public interface IEvalContext
 {

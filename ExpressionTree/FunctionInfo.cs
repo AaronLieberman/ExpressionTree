@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Expressions;
+namespace ExpressionTree;
 
 enum Associativity { Left, Right }
 

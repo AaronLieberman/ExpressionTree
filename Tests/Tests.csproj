@@ -6,7 +6,7 @@
 
     <IsPackable>false</IsPackable>
 
-    <RootNamespace>Expressions.Tests</RootNamespace>
+    <RootNamespace>ExpressionTree.Tests</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,10 +20,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Expressions\Expressions.csproj" />
   </ItemGroup>
 
 </Project>
