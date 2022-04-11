@@ -84,8 +84,6 @@ class TokenParser
         char quoteChar = _expression[_index];
 
         int start = _index;
-        var sb = new StringBuilder();
-        sb.Append(quoteChar);
         _index++;
 
         while (_index < _expression.Length && _expression[_index] != quoteChar)
