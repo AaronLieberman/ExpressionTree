@@ -21,6 +21,11 @@ public class ExpressionTests
         return ExpressionTree.Build(expression).Evaluate(propertyResolver ?? new EvalContext());
     }
 
+    static void BuildAndEvalFailure(string expression, IEvalContext? propertyResolver = null)
+    {
+        Assert.Throws<InvalidOperationException>(() => BuildAndEval(expression, propertyResolver));
+    }
+
     #region FakeEvalContext
 
     class FakeEvalContext : IEvalContext
@@ -54,14 +59,13 @@ public class ExpressionTests
         Check(BuildAndEval("3"), 3);
         Check(BuildAndEval("3.1"), 3.1f);
 
-        Check(BuildAndEval("\'hello\'"), "'hello'");
-        Check(BuildAndEval("\"hello\""), "\"hello\"");
+        Check(BuildAndEval("\'hello\'"), "hello");
+        Check(BuildAndEval("\"hello\""), "hello");
 
         Check(BuildAndEval("true"), true);
         Check(BuildAndEval("false"), false);
-        Check(BuildAndEval("TrUe"), true);
-        Check(BuildAndEval("FaLsE"), false);
         Check(BuildAndEval("0"), 0);
+        Assert.Null(BuildAndEval("null"));
     }
 
     [Fact]
@@ -91,6 +95,12 @@ public class ExpressionTests
     }
 
     [Fact]
+    void EvalFailure()
+    {
+        BuildAndEvalFailure("_test_throw");
+    }
+
+    [Fact]
     void SimpleLogic()
     {
         Check(BuildAndEval("!(true)"), false);
@@ -101,6 +111,7 @@ public class ExpressionTests
         Check(BuildAndEval("!(0)"), true);
         Check(BuildAndEval("!1"), false);
         Check(BuildAndEval("!0"), true);
+        Check(BuildAndEval("not(0)"), true);
 
         Check(BuildAndEval("!(!(false))"), false);
         Check(BuildAndEval("!(!(true))"), true);
@@ -129,9 +140,9 @@ public class ExpressionTests
         Check(BuildAndEval("!true -or !false"), true);
 
         Check(BuildAndEval("false && _test_throw"), false);
-        Assert.Throws<InvalidOperationException>(() => BuildAndEval("true && _test_throw"));
+        BuildAndEvalFailure("true && _test_throw");
         Check(BuildAndEval("true || _test_throw"), true);
-        Assert.Throws<InvalidOperationException>(() => BuildAndEval("false || _test_throw"));
+        BuildAndEvalFailure("false || _test_throw");
     }
 
     [Fact]
@@ -152,30 +163,36 @@ public class ExpressionTests
         }
 
         F("-eq", true);
+        F("==", true);
         F("-ne", false);
+        F("!=", false);
     }
 
     [Fact]
     void SimpleFunction()
     {
         Assert.InRange(Convert.ToSingle(BuildAndEval("sin(1.57)")), .9, 1.1);
-        Assert.Throws<InvalidOperationException>(() => BuildAndEval("_test_throw"));
     }
 
     [Fact]
     void Conditional()
     {
-        Check(BuildAndEval("if_else(true, 'hi', 'bye')"), "'hi'");
-        Check(BuildAndEval("if_else(false, 'hi', 'bye')"), "'bye'");
-        Check(BuildAndEval("if_else(1, 'hi', 'bye')"), "'hi'");
-        Check(BuildAndEval("if_else(0, 'hi', 'bye')"), "'bye'");
+        Check(BuildAndEval("if_else(true, 'hi', 'bye')"), "hi");
+        Check(BuildAndEval("if_else(false, 'hi', 'bye')"), "bye");
+        Check(BuildAndEval("if_else(1, 'hi', 'bye')"), "hi");
+        Check(BuildAndEval("if_else(0, 'hi', 'bye')"), "bye");
 
         Check(BuildAndEval("if_else('hi' -eq 'hi', 1 + 3, 8)"), 4);
         Check(BuildAndEval("if_else('hi' -eq 'bye', 1 + 3, 8)"), 8);
 
         Check(BuildAndEval("if_else(true, 4, _test_throw)"), 4);
         Check(BuildAndEval("if_else(false, _test_throw, 5)"), 5);
-        Assert.Throws<InvalidOperationException>(() => BuildAndEval("if_else(false, 4, _test_throw)"));
+        BuildAndEvalFailure("if_else(false, 4, _test_throw)");
+
+        BuildAndEvalFailure("if_else(3 -gt 3, 6, _test_throw)");
+        BuildAndEvalFailure("if_else(3 > 3, 6, _test_throw)");
+        Check(BuildAndEval("if_else(3 -ge 3, 6, _test_throw)"), 6);
+        Check(BuildAndEval("if_else(3 >= 3, 6, _test_throw)"), 6);
     }
 
     [Fact]
@@ -183,31 +200,49 @@ public class ExpressionTests
     {
         var resolver = new FakeEvalContext();
         resolver.Add("context", "value_3", 3);
-        resolver.Add("context", "value_here", "'here'");
+        resolver.Add("context", "value_here", "here");
         resolver.Add("context", "value_true", true);
         resolver.Add("context", "value_false", false);
-        resolver.Add("context", "object", "foo", "'bar'");
+        resolver.Add("context", "object", "foo", "bar");
 
         Check(BuildAndEval("context.value_3", resolver), 3);
-        Check(BuildAndEval("cOnTeXt.VaLuE_3", resolver), 3);
         Check(BuildAndEval("context.value_true", resolver), true);
-        Check(BuildAndEval("cOnTeXt.VaLuE_true", resolver), true);
         Check(BuildAndEval("context.value_false", resolver), false);
-        Check(BuildAndEval("cOnTeXt.VaLuE_false", resolver), false);
         Check(BuildAndEval("not_null(context.value_3)", resolver), true);
-        Check(BuildAndEval("not_null(cOnTeXt.VaLuE_3)", resolver), true);
+        Assert.Null(BuildAndEval("context.missing", resolver));
         Check(BuildAndEval("not_null(context.missing)", resolver), false);
-        Check(BuildAndEval("not_null(cOnTeXt.MiSsInG)", resolver), false);
         Check(BuildAndEval("exists_else(context.value_3, 4)", resolver), 3);
         Check(BuildAndEval("exists_else(context.missing, 5)", resolver), 5);
 
-        Check(BuildAndEval("exists_else(context.value_here, 'nope')", resolver), "'here'");
-        Check(BuildAndEval("exists_else(context.missing, 'nope')", resolver), "'nope'");
+        Check(BuildAndEval("exists_else(context.value_here, 'nope')", resolver), "here");
+        Check(BuildAndEval("exists_else(context.missing, 'nope')", resolver), "nope");
 
         Check(BuildAndEval("!(context.value_true)", resolver), false);
         Check(BuildAndEval("!(context.value_false)", resolver), true);
         Check(BuildAndEval("!context.value_true", resolver), false);
 
-        Check(BuildAndEval("context.if_else(true, object, none).foo", resolver), "'bar'");
+        // identifiers must be literals
+        BuildAndEvalFailure("context.if_else(true, object, none).foo", resolver);
+    }
+
+    [Fact]
+    void CaseSensitivity()
+    {
+        var resolver = new FakeEvalContext();
+        resolver.Add("context", "value_3", 3);
+        resolver.Add("context", "value_true", true);
+        resolver.Add("context", "value_false", false);
+
+        Check(BuildAndEval("TrUe", resolver), true);
+        Check(BuildAndEval("FaLsE", resolver), false);
+        Assert.Null(BuildAndEval("nUll", resolver));
+
+        Check(BuildAndEval("noT(false)", resolver), true);
+
+        Check(BuildAndEval("cOnTeXt.value_3", resolver), 3);
+        Check(BuildAndEval("context.VaLuE_3", resolver), 3);
+        Check(BuildAndEval("context.VaLuE_true", resolver), true);
+        Check(BuildAndEval("context.VaLuE_false", resolver), false);
+        Assert.Null(BuildAndEval("context.MiSsInG", resolver));
     }
 }

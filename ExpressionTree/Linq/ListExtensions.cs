@@ -6,7 +6,6 @@ namespace Core.Linq;
 
 public static class ListExtensions
 {
-    // viewModels and models must be sorted in the same sort order
     public static void SetRange<T>(this IList<T> list, IEnumerable<T> values)
     {
         list.Clear();

@@ -9,10 +9,19 @@ namespace ExpressionTree;
 [DebuggerDisplay("{Value,nq}, children={Children.Length}")]
 public class ExpressionTree
 {
+    public enum NodeType { Literal, Variable, Operator, Function }
+
+    public NodeType Type { get; private set; }
     public object? Value { get; private set; }
     public Func<IEvalContext, ExpressionTree[], object?>? Function { get; private set; }
     public ExpressionTree[] Children { get; private set; } = Array.Empty<ExpressionTree>();
-    internal Token Token { get; private init; }
+
+    readonly string _tokenText;
+
+    ExpressionTree(string tokenText)
+    {
+        _tokenText = tokenText;
+    }
 
     public static ExpressionTree Build(string expression)
     {
@@ -28,7 +37,7 @@ public class ExpressionTree
     {
         Token last = rpnExpression.Pop();
 
-        var result = new ExpressionTree { Token = last };
+        var result = new ExpressionTree(last.Text);
 
         if (last.Type == TokenType.Number)
         {
@@ -49,9 +58,10 @@ public class ExpressionTree
         {
             result.Value = last.Text;
         }
-        else if (FunctionsAndOperators.Operators.ContainsKey(last.Text))
+        else if (FunctionsAndOperators.Operators.ContainsKey(last.Text.ToLowerInvariant()))
         {
-            FunctionInfo op = FunctionsAndOperators.Operators[last.Text];
+            FunctionInfo op = FunctionsAndOperators.Operators[last.Text.ToLowerInvariant()];
+            result.Type = NodeType.Operator;
             result.Value = last.Text;
             result.Function = op.Evaluate;
 
@@ -59,7 +69,7 @@ public class ExpressionTree
             for (int i = 0; i < op.ArgCount; i++)
             {
                 var child = Build(rpnExpression);
-                if (child.Value != null && child.Value.Equals(","))
+                if (child.Value != null && child.Type == NodeType.Operator && child.Value.Equals(","))
                 {
                     children.InsertRange(0, child.Children);
                 }
@@ -71,19 +81,20 @@ public class ExpressionTree
 
             result.Children = children.ToArray();
         }
-        else if (FunctionsAndOperators.Functions.ContainsKey(last.Text))
+        else if (FunctionsAndOperators.Functions.ContainsKey(last.Text.ToLowerInvariant()))
         {
+            result.Type = NodeType.Function;
             result.Value = last.Text;
-            result.Function = FunctionsAndOperators.Functions[last.Text].Evaluate;
+            result.Function = FunctionsAndOperators.Functions[last.Text.ToLowerInvariant()].Evaluate;
 
-            if (FunctionsAndOperators.Functions[last.Text].ArgCount == 0)
+            if (FunctionsAndOperators.Functions[last.Text.ToLowerInvariant()].ArgCount == 0)
             {
                 result.Children = Array.Empty<ExpressionTree>();
             }
             else
             {
                 var child = Build(rpnExpression);
-                if (child.Value != null && child.Value.Equals(","))
+                if (child.Value != null && child.Type == NodeType.Operator && child.Value.Equals(","))
                 {
                     result.Children = child.Children;
                 }
@@ -103,8 +114,13 @@ public class ExpressionTree
             {
                 result.Value = false;
             }
+            else if (last.Text.ToLowerInvariant() == "null")
+            {
+                result.Value = null;
+            }
             else
             {
+                result.Type = NodeType.Variable;
                 result.Value = last.Text;
             }
         }
@@ -121,13 +137,38 @@ public class ExpressionTree
 
     public override string ToString()
     {
-        var sb = new StringBuilder();
-        sb.Append(Token.Text);
-        foreach (var child in Children)
+        string result;
+
+        List<string> list = Children.Select(a => a.ToString()).ToList();
+
+        if (Type == NodeType.Function || Type == NodeType.Operator)
         {
-            sb.Append(' ');
-            sb.Append(child);
+            if (!Children.Any())
+            {
+                result = _tokenText;
+            }
+            else if (Children.Length == 1 || Type == NodeType.Function)
+            {
+                result = $"{_tokenText}({string.Join(", ", list)}";
+            }
+            else
+            {
+                string separator = _tokenText switch
+                {
+                    "," => ", ",
+                    "." => ".",
+                    _ => $" {_tokenText} "
+                };
+
+                result = string.Join(separator, list);
+            }
         }
-        return sb.ToString();
+        else
+        {
+            result = _tokenText;
+            Debug.Assert(!Children.Any());
+        }
+
+        return result;
     }
 }

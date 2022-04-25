@@ -11,7 +11,10 @@ public class RpnTests
 {
     static void VerifyRpn(IEnumerable<Token> tokens, string expected)
     {
-        var actual = string.Join(" ", tokens.Select(a => a.Text));
+        var actual = string.Join(" ", tokens
+            .Select(a => a.Type == TokenType.String ?
+                "{" + a.Text + "}"
+                : a.Text));
         Assert.Equal(expected, actual);
     }
 
@@ -52,8 +55,8 @@ public class RpnTests
     [Fact]
     void Text()
     {
-        ParseAndVerify("1 + '321 bye don\\'t'", "1 '321 bye don\\'t' +");
-        ParseAndVerify("\"bye\" - \"'hi'\" && '\"foo\"'", "\"bye\" \"'hi'\" - '\"foo\"' &&");
+        ParseAndVerify("1 + '321 bye don\\'t'", "1 {321 bye don't} +");
+        ParseAndVerify("\"bye\" - \"'hi'\" && '\"foo\"'", "{bye} {'hi'} - {\"foo\"} &&");
     }
 
     [Fact]

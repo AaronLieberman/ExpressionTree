@@ -9,88 +9,101 @@ namespace ExpressionTree;
 
 static class FunctionsAndOperators
 {
-    // list of operators and precedence values from https://en.cppreference.com/w/cpp/language/operator_precedence
-    // Note precedence in this chart is increasing from our normal way of thinking about it so we negate it
-    public static readonly Dictionary<string, FunctionInfo> Operators =
-        new (string op, int precidence, Associativity associativity, int argCount, Func<IEvalContext, ExpressionTree[], object?> evaluate)[]
-        {
-            (".", 2, Associativity.Left, 2, MakeFunction2((context, a, b) =>
-                {
-                    object? aValue = a.Evaluate(context);
-                    object? bValue = b.Evaluate(context);
+    public static readonly IReadOnlyDictionary<string, FunctionInfo> Operators;
+    public static readonly IReadOnlyDictionary<string, FunctionInfo> Functions;
 
-                    // first try to interpret the object as a dictionary
-                    if (aValue is not IDictionary<string, object?> dictionary)
+    static FunctionsAndOperators()
+    {
+        // list of operators and precedence values from https://en.cppreference.com/w/cpp/language/operator_precedence
+        // Note precedence in this chart is increasing from our normal way of thinking about it so we negate it
+        var operators = new (string op, int precidence, Associativity associativity, int argCount, Func<IEvalContext, ExpressionTree[], object?> evaluate)[]
+            {
+                (".", 2, Associativity.Left, 2, MakeFunction2((context, a, b) =>
                     {
-                        // if that fails, try to convert to an object name and see if we can get a dictionary out of it
-                        string? objectName = ConvertUtility.TryConvertToString(aValue);
-                        if (objectName == null)
-                            throw new KeyNotFoundException("Couldn't interpret {0} as a dictionary or string".FormatWith(a));
+                        object? aValue = a.Evaluate(context);
 
-                        dictionary = context.TryGetObject(objectName.ToLowerInvariant())
-                            ?? throw new KeyNotFoundException("Couldn't find dictionary {0}".FormatWith(a));
-                    }
+                        if (b.Type != ExpressionTree.NodeType.Variable)
+                        {
+                            throw new InvalidOperationException($"Operand on right side of {a}.{b} must be a variable.");
+                        }
 
-                    string? propertyName = ConvertUtility.TryConvertToString(bValue);
-                    if (propertyName == null)
-                        throw new KeyNotFoundException("Couldn't convert identifier \"{0}\" to a string".FormatWith(b));
+                        object? bValue = b.Evaluate(context);
 
-                    return dictionary.TryGetValue(propertyName.ToLowerInvariant(), out object? value) ? value : null;
-                })),
-            ("_neg", 3, Associativity.Right, 1, MakeMathFunction1(a => -a, a => -a)),
-            ("!", 3, Associativity.Right, 1, CatchConversions(MakeFunction1((context, a) => !ConvertUtility.TryConvertToBool(a.Evaluate(context))))),
+                        // first try to interpret the object as a dictionary
+                        if (aValue is not IDictionary<string, object?> dictionary)
+                        {
+                            // if that fails, try to convert to an object name and see if we can get a dictionary out of it
+                            string? objectName = ConvertUtility.TryConvertToString(aValue);
+                            if (objectName == null)
+                                throw new KeyNotFoundException("Couldn't interpret {0} as a dictionary or string".FormatWith(a));
 
-            ("*", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a * b, (a, b) => a * b)),
-            ("/", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a / b, (a, b) => a / b)),
-            ("+", 6, Associativity.Left, 2, MakeMathFunction2((a, b) => a + b, (a, b) => a + b)),
-            ("-", 6, Associativity.Left, 2, MakeMathFunction2((a, b) => a - b, (a, b) => a - b)),
+                            dictionary = context.TryGetObject(objectName.ToLowerInvariant())
+                                ?? throw new KeyNotFoundException("Couldn't find dictionary {0}".FormatWith(a));
+                        }
 
-            ("-lt", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a < b, (a, b) => a < b)),
-            ("-le", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a <= b, (a, b) => a <= b)),
-            ("-gt", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a > b, (a, b) => a > b)),
-            ("-ge", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a >= b, (a, b) => a >= b)),
-            ("-eq", 10, Associativity.Left, 2, MakeFunction2((context, a, b) => TestEquality(context, a, b))),
-            ("-ne", 10, Associativity.Left, 2, MakeFunction2((context, a, b) => !TestEquality(context, a, b))),
+                        string? propertyName = ConvertUtility.TryConvertToString(bValue);
+                        if (propertyName == null)
+                            throw new KeyNotFoundException("Couldn't convert identifier \"{0}\" to a string".FormatWith(b));
 
-            ("&&", 14, Associativity.Left, 2, MakeFunction2(LogicalAnd)),
-            ("-and", 14, Associativity.Left, 2, MakeFunction2(LogicalAnd)),
-            ("||", 15, Associativity.Left, 2, MakeFunction2(LogicalOr)),
-            ("-or", 15, Associativity.Left, 2, MakeFunction2(LogicalOr)),
+                        return dictionary.TryGetValue(propertyName.ToLowerInvariant(), out object? value) ? value : null;
+                    })),
+                ("_neg", 3, Associativity.Right, 1, MakeMathFunction1(a => -a, a => -a)),
+                ("!", 3, Associativity.Right, 1, CatchConversions(MakeFunction1((context, a) => !ConvertUtility.TryConvertToBool(a.Evaluate(context))))),
 
-            (",", 17, Associativity.Left, 2, (_, _) => throw new InvalidOperationException("Comma operators are processed during tree building, shouldn't get this far")),
-        }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, -a.precidence, a.associativity, a.argCount, (context, args) =>
-        {
-            if (!VerifyArgCount(args, a.argCount)) return null;
-            return a.evaluate(context, args);
-        }));
+                ("*", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a * b, (a, b) => a * b)),
+                ("/", 5, Associativity.Left, 2, MakeMathFunction2((a, b) => a / b, (a, b) => a / b)),
+                ("+", 6, Associativity.Left, 2, MakeMathFunction2((a, b) => a + b, (a, b) => a + b)),
+                ("-", 6, Associativity.Left, 2, MakeMathFunction2((a, b) => a - b, (a, b) => a - b)),
 
-    static object LogicalAnd(IEvalContext context, ExpressionTree a, ExpressionTree b)
-    {
-        return (ConvertUtility.TryConvertToBool(a.Evaluate(context)) ?? false) &&
-            (ConvertUtility.TryConvertToBool(b.Evaluate(context)) ?? false);
+                ("-lt", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a < b, (a, b) => a < b)),
+                ("-le", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a <= b, (a, b) => a <= b)),
+                ("-gt", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a > b, (a, b) => a > b)),
+                ("-ge", 9, Associativity.Left, 2, MakeMathFunction2((a, b) => a >= b, (a, b) => a >= b)),
+                ("-eq", 10, Associativity.Left, 2, MakeFunction2((context, a, b) => TestEquality(context, a, b))),
+                ("-ne", 10, Associativity.Left, 2, MakeFunction2((context, a, b) => !TestEquality(context, a, b))),
+
+                ("-and", 14, Associativity.Left, 2, MakeFunction2((context, a, b) =>
+                    (ConvertUtility.TryConvertToBool(a.Evaluate(context)) ?? false) &&
+                    (ConvertUtility.TryConvertToBool(b.Evaluate(context)) ?? false))),
+                ("-or", 15, Associativity.Left, 2, MakeFunction2((context, a, b) =>
+                    (ConvertUtility.TryConvertToBool(a.Evaluate(context)) ?? false) ||
+                    (ConvertUtility.TryConvertToBool(b.Evaluate(context)) ?? false))),
+
+                (",", 17, Associativity.Left, 2, (_, _) => throw new InvalidOperationException("Comma operators are processed during tree building, shouldn't get this far")),
+            }
+            .ToDictionary(a => a.op, a => new FunctionInfo(a.op, -a.precidence, a.associativity, a.argCount, (context, args) =>
+            {
+                if (!VerifyArgCount(args, a.argCount)) return null;
+                return a.evaluate(context, args);
+            }));
+        operators["<"] = operators["-lt"];
+        operators["<="] = operators["-le"];
+        operators[">"] = operators["-gt"];
+        operators[">="] = operators["-ge"];
+        operators["=="] = operators["-eq"];
+        operators["!="] = operators["-ne"];
+        operators["&&"] = operators["-and"];
+        operators["||"] = operators["-or"];
+
+        Operators = operators;
+
+        Functions = new (string op, int argCount, Func<IEvalContext, ExpressionTree[], object?> evaluate)[]
+            {
+                ("not", 1, MakeFunction1((context, a) => !Convert.ToBoolean(a.Evaluate(context)))),
+                ("sin", 1, MakeMathFunction1(null, a => (float)Math.Sin(a))),
+                ("cos", 1, MakeMathFunction1(null, a => (float)Math.Cos(a))),
+                ("pow", 2, MakeMathFunction2(null, (a, b) => Math.Pow(a, b))),
+                ("not_null", 1, (context, args) => args[0].Evaluate(context) != null),
+                ("exists_else", 2, MakeFunction2((context, property, elseProperty) => property.Evaluate(context) ?? elseProperty.Evaluate(context))),
+                ("if_else", 3, MakeFunction3((context, cond, a, b) => Convert.ToBoolean(cond.Evaluate(context)) ? a.Evaluate(context) : b.Evaluate(context))),
+                ("_test_throw", 0, (_, _) => throw new InvalidOperationException("Throwing for test purposes")),
+            }
+            .ToDictionary(a => a.op, a => new FunctionInfo(a.op, 0, Associativity.Left, a.argCount, (context, args) =>
+            {
+                if (!VerifyArgCount(args, a.argCount)) return null;
+                return a.evaluate(context, args);
+            }));
     }
-
-    static object LogicalOr(IEvalContext context, ExpressionTree a, ExpressionTree b)
-    {
-        return (ConvertUtility.TryConvertToBool(a.Evaluate(context)) ?? false) ||
-            (ConvertUtility.TryConvertToBool(b.Evaluate(context)) ?? false);
-    }
-
-    public static readonly Dictionary<string, FunctionInfo> Functions =
-        new (string op, int argCount, Func<IEvalContext, ExpressionTree[], object?> evaluate)[]
-        {
-            ("sin", 1, MakeMathFunction1(null, a => (float)Math.Sin(a))),
-            ("cos", 1, MakeMathFunction1(null, a => (float)Math.Cos(a))),
-            ("pow", 2, MakeMathFunction2(null, (a, b) => Math.Pow(a, b))),
-            ("not_null", 1, (context, args) => args[0].Evaluate(context) != null),
-            ("exists_else", 2, MakeFunction2((context, property, elseProperty) => property.Evaluate(context) ?? elseProperty.Evaluate(context))),
-            ("if_else", 3, MakeFunction3((context, cond, a, b) => Convert.ToBoolean(cond.Evaluate(context)) ? a.Evaluate(context) : b.Evaluate(context))),
-            ("_test_throw", 0, (_, _) => throw new InvalidOperationException("Throwing for test purposes")),
-        }.ToDictionary(a => a.op, a => new FunctionInfo(a.op, 0, Associativity.Left, a.argCount, (context, args) =>
-        {
-            if (!VerifyArgCount(args, a.argCount)) return null;
-            return a.evaluate(context, args);
-        }));
 
     public static FunctionInfo GetOperatorOrFunction(string name)
     {

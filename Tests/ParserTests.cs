@@ -21,7 +21,7 @@ public class ParserTests
         Assert.Equal("3", NextToken(parser));
         Assert.Equal("1", NextToken(parser));
         Assert.Equal("hi", NextToken(parser));
-        Assert.Equal("'321 bye don\\'t'", NextToken(parser));
+        Assert.Equal("321 bye don't", NextToken(parser));
         Assert.Equal("-", NextToken(parser));
         Assert.Equal("+", NextToken(parser));
         Assert.Equal("-", NextToken(parser));
@@ -68,6 +68,28 @@ public class ParserTests
         Assert.Equal("&&", NextToken(parser));
         Assert.Equal("&&", NextToken(parser));
         Assert.Equal("2", NextToken(parser));
+        Assert.Null(parser.NextToken());
+    }
+
+    [Fact]
+    void Functions()
+    {
+        TokenParser parser = new("sin(x) + sin y * pow(z, w)");
+
+        Assert.Equal("sin", NextToken(parser));
+        Assert.Equal("(", NextToken(parser));
+        Assert.Equal("x", NextToken(parser));
+        Assert.Equal(")", NextToken(parser));
+        Assert.Equal("+", NextToken(parser));
+        Assert.Equal("sin", NextToken(parser));
+        Assert.Equal("y", NextToken(parser));
+        Assert.Equal("*", NextToken(parser));
+        Assert.Equal("pow", NextToken(parser));
+        Assert.Equal("(", NextToken(parser));
+        Assert.Equal("z", NextToken(parser));
+        Assert.Equal(",", NextToken(parser));
+        Assert.Equal("w", NextToken(parser));
+        Assert.Equal(")", NextToken(parser));
         Assert.Null(parser.NextToken());
     }
 }

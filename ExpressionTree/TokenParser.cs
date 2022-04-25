@@ -83,18 +83,19 @@ class TokenParser
         if (_index >= _expression.Length || _expression[_index] is not '\'' and not '"') return null;
         char quoteChar = _expression[_index];
 
-        int start = _index;
+        StringBuilder sb = new();
         _index++;
 
         while (_index < _expression.Length && _expression[_index] != quoteChar)
         {
             if (_expression[_index] == '\\' && _index < _expression.Length - 1) _index++;
+            sb.Append(_expression[_index]);
             _index++;
         }
 
         if (_index < _expression.Length) _index++;
 
-        return _expression.Substring(start, _index - start);
+        return sb.ToString();
     }
 
     void SkipWhitespace()
